@@ -1,0 +1,74 @@
+{
+  "fan_interval": 5,
+  "rgb_interval": 8,
+  "led_blink_period": 0.4,
+  "http_port": 34010,
+  "bind": "0.0.0.0",
+  "influx_db": "pironman5-max",
+  "curve": [
+    [
+      45,
+      0
+    ],
+    [
+      55,
+      40
+    ],
+    [
+      65,
+      70
+    ],
+    [
+      75,
+      100
+    ]
+  ],
+  "fans": [
+    {
+      "name": "case_fans",
+      "model": "IceCube 40x40x10 5V (stock, 1x - fan2 slot empty)",
+      "power_pin": 6,
+      "led_pin": 5,
+      "pwm": false,
+      "on_temp": 56,
+      "off_temp": 54,
+      "mode": "auto",
+      "led_mode": "follow",
+      "led_warn_temp": 65
+    }
+  ],
+  "rgb_enabled": true,
+  "rgb_api_base": "http://127.0.0.1:34001/api/v1.0",
+  "rgb_anchors": [
+    [
+      40,
+      "#00ff00"
+    ],
+    [
+      50,
+      "#0000ff"
+    ],
+    [
+      55,
+      "#ffff00"
+    ],
+    [
+      60,
+      "#ff8000"
+    ],
+    [
+      65,
+      "#ff0000"
+    ]
+  ],
+  "rgb_warn_temp": 65,
+  "rgb_warn_color": "#b000ff",
+  "rgb_warn_speed": 90,
+  "rgb_temp_lo": 40,
+  "rgb_temp_hi": 65,
+  "rgb_bri_lo": 20,
+  "rgb_bri_hi": 100,
+  "rgb_color_step": 8,
+  "rgb_bri_step": 5,
+  "rgb_temp_deadband": 1.0
+}
