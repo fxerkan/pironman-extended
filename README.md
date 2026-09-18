@@ -3,6 +3,8 @@
 > An extension for [sunfounder/pironman5](https://github.com/sunfounder/pironman5).
 > It runs alongside the official `pironman5` service and does not replace it.
 
+![Case Fans Grafana dashboard](docs/pironman-extended-casefans-grafana-dashboard.png)
+
 One small service that extends a **SunFounder Pironman 5 / 5 Max** with the things
 the stock firmware doesn't do, behind a single versioned HTTP API. Talks to the
 stock `pironman5` service instead of fighting it, so the built-in dashboard/RGB
@@ -26,7 +28,25 @@ controls keep working.
 | POST | `/fans/<name>` | `{mode?: auto\|manual\|off, percent?, led_mode?: follow\|on\|off\|warn}` |
 | POST | `/rgb` | `{enabled?: bool}` |
 
-## Grafana (no CORS, no mixed-content)
+## Grafana dashboard
+[`grafana/case-fans.json`](grafana/case-fans.json) is the **Case Fans** dashboard shown
+above: fan and LED-mode buttons, the RGB auto toggle, CPU temperature coloured like the LEDs,
+per-fan speed/state/RPM, and pironman's CPU temperature and tower-fan RPM for context.
+
+Import it under *Dashboards → New → Import*. It expects two datasources with these UIDs:
+
+| UID | Type | Used for |
+|---|---|---|
+| `pironman_influxdb` | InfluxDB, database `pironman5-max` | all graphs and stats |
+| `pironman_api` | [Infinity](https://grafana.com/grafana/plugins/yesoreyeram-infinity-datasource/) | the button panels |
+
+The `pe_server_url` variable (`host:port`, default `localhost:34010`) sets where the buttons
+send their requests. They call `http://${pe_server_url}/api/v1/...` **from the browser**, so
+the API must be reachable from whatever machine is viewing the dashboard (the default
+`"bind": "0.0.0.0"`), and it only works when Grafana itself is served over plain HTTP. For
+HTTPS or remote access, use the proxy setup below instead.
+
+## Grafana via datasource proxy (no CORS, no mixed-content)
 Bind the API to `127.0.0.1` and call it through Grafana's **datasource proxy** so the
 browser only ever talks to Grafana (same origin, works over HTTP-LAN and public HTTPS
 alike). Add an Infinity datasource `uid: pironman_extend`, `url: http://localhost:34010`,
