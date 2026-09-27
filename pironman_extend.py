@@ -11,23 +11,33 @@ the stock firmware doesn't do, exposed under a single versioned HTTP API:
                         does this *through pironman's own HTTP API* so the stock
                         Grafana RGB panels keep working untouched.
   * metrics           : pushes per-fan metrics to the same InfluxDB Grafana reads.
+  * OLED status screen: a second 128x64 SSD1315 OLED on its own i2c bus rotates
+                        CPU temp / load / SSD usage / SSD temp, and preempts with a
+                        blinking inverted ALARM on a crit threshold or system
+                        anomaly (under-voltage, throttle, RAM full, root read-only).
+                        The API can also draw arbitrary text or an image on it.
 
 Designed to grow: add a peripheral, add a couple of /api/v1/... routes, done.
 Meant to be shareable with the Pironman community.
 
 API (JSON, all under /api/v1):
   GET  /health
-  GET  /status                 -> {cpu_temp, fans:[...], rgb:{...}}
+  GET  /status                 -> {cpu_temp, fans:[...], rgb:{...}, oled:{...}}
   GET  /fans        GET /fans/<name>
   POST /fans/<name>            {mode?: auto|manual|off, percent?, led_mode?: follow|on|off|warn}
   GET  /rgb
   POST /rgb                    {enabled?: bool}
+  GET  /oled                   -> {enabled, showing, pages, override, alerts, metrics}
+  POST /oled                   {enabled?: bool, contrast?: 0-255}
+  POST /oled/text              {text|lines[], size?, align?: left|center, invert?, duration?}
+  POST /oled/image             {image_b64, fit?: contain|stretch|center, invert?, threshold?, duration?}
+  POST /oled/clear             -> drop pushed text/image, back to auto rotation
 
 Reached from Grafana via the datasource proxy (same-origin, so it works over both
 http://rpifx.local:3003 and https://grafana.fxerkan.com with no CORS / mixed-content):
   POST /api/datasources/proxy/uid/pironman_extend/api/v1/fans/case_fans
 """
-import json, os, time, threading, http.server, socketserver, urllib.request, urllib.parse, signal, sys
+import json, os, time, threading, http.server, socketserver, urllib.request, urllib.parse, signal, sys, glob, base64, io, subprocess
 import lgpio
 
 CONFIG = os.environ.get("PIRONMAN_EXTEND_CONFIG", "/home/fxerkan/PROJECTs/pironman-extend/config.json")
@@ -53,6 +63,34 @@ DEFAULTS = {
     "rgb_warn_temp": 65, "rgb_warn_color": "#b000ff", "rgb_warn_speed": 90,
     "rgb_temp_lo": 40, "rgb_temp_hi": 65, "rgb_bri_lo": 20, "rgb_bri_hi": 100,
     "rgb_color_step": 8, "rgb_bri_step": 5, "rgb_temp_deadband": 1.0,
+    # --- OLED status screen (Waveshare 128x64 SSD1315 on its own i2c-gpio bus) ---
+    # Separate bus (default /dev/i2c-3) so it never clashes with Pironman's own
+    # 0x3c OLED on i2c-1. See README for the i2c-gpio dtoverlay + wiring.
+    "oled_enabled": True,
+    "oled_i2c_port": 3,
+    "oled_i2c_addr": 60,            # 0x3c (int or "0x3c")
+    "oled_width": 128, "oled_height": 64,
+    "oled_refresh": 2,             # render/scan tick (s) -> anomaly catch speed
+    "oled_page_dwell": 60,         # seconds per metric before rotating (1-3 min => 60..180)
+    "oled_alert_rot": 3,           # if many alarms, seconds between them
+    "oled_alarm_override": True,   # alarms preempt a user-pushed text/image (safety)
+    "oled_contrast": 255,
+    # page tokens: cpu load ssd | disks (expands per drive) | ram (shown only when
+    # >= warn) | clock | speed | banner | anim:<pacman|faces|dots|cat>
+    "oled_pages": ["banner", "cpu", "load", "disks", "ssd", "ram", "clock",
+                   "speed", "anim:pacman", "anim:faces"],
+    "oled_thresholds": {           # (warn, crit)
+        "cpu": [70, 80], "load": [1.5, 3.0], "ram": [90, 95],
+        "disk": [85, 95], "ssd": [60, 70],
+    },
+    "oled_font": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "oled_anim_dwell": 8,          # seconds an animation page runs
+    "oled_anim_frame": 0.2,        # animation frame delay (s) -> ~5 fps
+    "oled_banner": ["FXerkan's", "RPIFX"],
+    "oled_banner_dwell": 6,
+    "oled_disk_min_gb": 16,        # ignore drives smaller than this
+    "oled_speedtest_interval": 21600,   # re-run Ookla/HTTP download test every 6 h
+    "oled_speedtest_url": "https://speed.cloudflare.com/__down?bytes=25000000",
 }
 
 
@@ -129,6 +167,7 @@ def quantize(v, step):
 # ---- hardware PWM (4-wire fans) ---------------------------------------------
 class SysfsPWM:
     def __init__(self, chip, channel, freq):
+        chip = self._resolve_chip(chip)
         self.base = f"/sys/class/pwm/pwmchip{chip}/pwm{channel}"
         self.exp = f"/sys/class/pwm/pwmchip{chip}/export"
         self.channel = channel
@@ -140,6 +179,20 @@ class SysfsPWM:
         self._w("period", self.period)
         self._w("duty_cycle", 0)
         self._w("enable", 1)
+
+    @staticmethod
+    def _resolve_chip(chip):
+        # pwm_chip may be an int index or a stable DT address substring
+        # (e.g. "1f00098000"). pwmchipN enumeration order can swap across reboots
+        # when >1 RP1 PWM controller exists; the address never does. On Pi 5
+        # GPIO18 = PWM0_CHAN2, controller 1f00098000. ponytail: address match if
+        # non-numeric, plain index otherwise.
+        if str(chip).isdigit():
+            return int(chip)
+        for p in glob.glob("/sys/class/pwm/pwmchip*"):
+            if str(chip) in os.path.realpath(p):
+                return int(p.rsplit("pwmchip", 1)[1])
+        raise FileNotFoundError("no pwmchip matches %r" % (chip,))
 
     def _w(self, attr, val):
         with open(f"{self.base}/{attr}", "w") as f:
@@ -373,6 +426,692 @@ class RgbController:
                 "warn_temp": self.cfg["rgb_warn_temp"]}
 
 
+# ---- OLED: metric readers + anomaly detection (pure, testable) ---------------
+def load_avg1():
+    try:
+        return float(open("/proc/loadavg").read().split()[0])
+    except Exception:
+        return None
+
+
+def disk_used_pct(path="/"):
+    try:
+        import shutil
+        du = shutil.disk_usage(path)
+        return du.used / du.total * 100.0
+    except Exception:
+        return None
+
+
+def mem_used_pct():
+    try:
+        info = {}
+        for line in open("/proc/meminfo"):
+            parts = line.split()
+            info[parts[0].rstrip(":")] = int(parts[1])
+        total, avail = info["MemTotal"], info["MemAvailable"]
+        return (total - avail) / total * 100.0
+    except Exception:
+        return None
+
+
+def find_nvme_temp_path():
+    for h in glob.glob("/sys/class/hwmon/hwmon*"):
+        try:
+            if open(os.path.join(h, "name")).read().strip() == "nvme":
+                return os.path.join(h, "temp1_input")   # Composite
+        except OSError:
+            pass
+    return None
+
+
+def read_hwmon_c(path):
+    try:
+        return int(open(path).read().strip()) / 1000.0
+    except Exception:
+        return None
+
+
+def read_throttled():
+    """vcgencmd get_throttled bitmask (0 on failure)."""
+    try:
+        out = subprocess.run(["vcgencmd", "get_throttled"],
+                             capture_output=True, text=True, timeout=3).stdout
+        return int(out.strip().split("=")[1], 16)
+    except Exception:
+        return 0
+
+
+def root_readonly():
+    try:
+        for line in open("/proc/mounts"):
+            p = line.split()
+            if len(p) >= 4 and p[1] == "/":
+                return p[3].split(",")[0] == "ro"
+    except OSError:
+        pass
+    return False
+
+
+def oled_severity(key, value, thresholds, nproc):
+    """0=ok 1=warn 2=crit; load threshold is per-core."""
+    if value is None:
+        return 0
+    v = value / nproc if key == "load" else value
+    warn, crit = thresholds[key]
+    return 2 if v >= crit else 1 if v >= warn else 0
+
+
+def oled_build_alerts(m, throttled, ro, thresholds, nproc):
+    """Active problems as (short_title, detail). System anomalies first, then crit thresholds."""
+    a = []
+    if throttled & 0x1: a.append(("DUSUK VOLTAJ", "5V besleme zayif"))
+    if throttled & 0x4: a.append(("THROTTLE", "CPU kisiliyor"))
+    if throttled & 0x2: a.append(("FREKANS KISILI", "arm capped"))
+    if throttled & 0x8: a.append(("ISI LIMITI", "soft temp limit"))
+    if ro:              a.append(("DISK SALT-OKUR", "root ro! kontrol et"))
+    msg = {
+        "cpu":  lambda v: ("CPU KRITIK",  f"{v:.0f} derece"),
+        "ssd":  lambda v: ("SSD KRITIK",  f"{v:.0f} derece"),
+        "disk": lambda v: ("DISK DOLDU",  f"%{v:.0f} kullanim"),
+        "ram":  lambda v: ("RAM DOLDU",   f"%{v:.0f} kullanim"),
+        "load": lambda v: ("YUK KRITIK",  f"{v:.2f} yuk"),
+    }
+    for k in ["cpu", "ssd", "disk", "ram", "load"]:
+        if m.get(k) is not None and oled_severity(k, m[k], thresholds, nproc) == 2:
+            a.append(msg[k](m[k]))
+    return a
+
+
+# ---- OLED controller (own i2c bus; rotation + anomaly alarm + API draw) ------
+# ---- OLED helpers: disks, datetime, speedtest, icons -------------------------
+def human_bytes(n):
+    if n is None:
+        return "-"
+    n = float(n)
+    for unit in ("B", "K", "M", "G", "T"):
+        if n < 1024 or unit == "T":
+            s = f"{n:.0f}{unit}" if (unit in ("B", "K", "M") or n >= 100) else f"{n:.1f}{unit}"
+            return s.replace(".0", "")
+        n /= 1024.0
+
+
+TR_DAYS = ["Pazartesi", "Sali", "Carsamba", "Persembe", "Cuma", "Cumartesi", "Pazar"]
+
+
+def list_disks(min_gb=16):
+    """Physical disks >= min_gb, each with (name, total, used, pct). Skips zram/loop.
+    Usage comes from the largest mounted partition, if any."""
+    import shutil
+    try:
+        out = subprocess.run(["lsblk", "-J", "-b", "-o", "NAME,TYPE,TRAN,SIZE,MODEL,MOUNTPOINT"],
+                             capture_output=True, text=True, timeout=5).stdout
+        data = json.loads(out)
+    except Exception:
+        return []
+    label = {"nvme": "NVME SSD", "usb": "USB DISK", "sata": "SATA SSD",
+             "mmc": "SD KART", "ata": "SATA DISK"}
+    disks = []
+    for dev in data.get("blockdevices", []):
+        if dev.get("type") != "disk":
+            continue
+        name0 = dev.get("name", "")
+        if name0.startswith(("zram", "loop")):
+            continue
+        size = int(dev.get("size") or 0)
+        if size < min_gb * 1024 ** 3:
+            continue
+        mounts = []
+
+        def walk(node):
+            mp = node.get("mountpoint")
+            if mp and not mp.startswith("[") and mp not in ("/boot", "/boot/firmware"):
+                mounts.append(mp)
+            for ch in node.get("children") or []:
+                walk(ch)
+        walk(dev)
+        used = total = None
+        for mp in mounts:
+            try:
+                du = shutil.disk_usage(mp)
+                used, total = du.used, du.total
+                break
+            except OSError:
+                pass
+        tran = dev.get("tran") or ""
+        name = label.get(tran) or (dev.get("model") or name0).strip()[:14]
+        pct = (used / total * 100.0) if (used and total) else None
+        disks.append({"name": name, "size": size, "used": used,
+                      "total": total or size, "pct": pct})
+    return disks
+
+
+def run_speedtest(url, timeout=40):
+    """Download-speed in Mbps. Prefers Ookla `speedtest`, then `speedtest-cli`,
+    then a plain HTTP download from `url` (works with no extra tools installed)."""
+    # 1) Ookla CLI
+    try:
+        out = subprocess.run(["speedtest", "--format=json", "--accept-license", "--accept-gdpr"],
+                             capture_output=True, text=True, timeout=timeout).stdout
+        bw = json.loads(out)["download"]["bandwidth"]      # bytes/s
+        return bw * 8 / 1e6
+    except Exception:
+        pass
+    # 2) speedtest-cli
+    try:
+        out = subprocess.run(["speedtest-cli", "--json"],
+                             capture_output=True, text=True, timeout=timeout).stdout
+        return json.loads(out)["download"] / 1e6            # bits/s -> Mbps
+    except Exception:
+        pass
+    # 3) HTTP fallback: time a bounded download (UA header — CDNs 403 the default)
+    try:
+        t0 = time.monotonic()
+        got = 0
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (pironman-extend)"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            while True:
+                chunk = r.read(65536)
+                if not chunk:
+                    break
+                got += len(chunk)
+                if time.monotonic() - t0 > 12 or got > 60 * 1024 * 1024:
+                    break
+        dt = time.monotonic() - t0
+        return (got * 8 / 1e6) / dt if dt > 0 else None
+    except Exception:
+        return None
+
+
+# ---- OLED controller (own i2c bus; rotation + anomaly alarm + API draw) ------
+class OledController:
+    """Drives the second OLED. Rotates metric/info/anim pages (each with an icon),
+    and on a crit threshold or system anomaly preempts with a blinking inverted
+    ALARM screen. The HTTP API can push arbitrary text or an image (optional TTL)."""
+
+    def __init__(self, cfg, log, temp_getter):
+        self.cfg = cfg
+        self.log = log
+        self._temp = temp_getter
+        self.nproc = os.cpu_count() or 4
+        self.thresholds = cfg["oled_thresholds"]
+        self.pages = cfg["oled_pages"]
+        self.enabled = bool(cfg["oled_enabled"])
+        self.override = None
+        self.lock = threading.Lock()
+        self.tick = 0
+        self.idx = 0
+        self.dwell = 0.0
+        self.anim_frame = 0
+        self.showing = "off"
+        self._cur_is_anim = False
+        self._cleared = False
+        self._last_render = 0.0
+        self._fonts = {}
+        self._disks = []
+        self._disks_ts = 0.0
+        self.speed_mbps = None
+        self.speed_ts = None
+        self._alive = True
+        self.dev = None
+        self.PIL = None
+        self.nvme_path = find_nvme_temp_path()
+        if not self.enabled:
+            return
+        try:
+            from luma.core.interface.serial import i2c
+            from luma.oled.device import ssd1306
+            from PIL import Image, ImageDraw, ImageFont, ImageOps
+            self.PIL = (Image, ImageDraw, ImageFont, ImageOps)
+            addr = cfg["oled_i2c_addr"]
+            addr = int(str(addr), 0) if isinstance(addr, str) else int(addr)
+            serial = i2c(port=cfg["oled_i2c_port"], address=addr)
+            self.dev = ssd1306(serial, width=cfg["oled_width"], height=cfg["oled_height"])
+            self.dev.persist = True
+            self.dev.contrast(int(cfg["oled_contrast"]))
+        except Exception as e:
+            self.log(f"[pironman-extend] OLED init failed ({e}); disabling OLED")
+            self.enabled = False
+            self.dev = None
+
+    # -- fonts --
+    def _font(self, size):
+        if size not in self._fonts:
+            from PIL import ImageFont
+            self._fonts[size] = ImageFont.truetype(self.cfg["oled_font"], size)
+        return self._fonts[size]
+
+    # -- metrics --
+    def read_metrics(self):
+        return {
+            "cpu":  self._temp(),
+            "load": load_avg1(),
+            "disk": disk_used_pct("/"),
+            "ram":  mem_used_pct(),
+            "ssd":  read_hwmon_c(self.nvme_path) if self.nvme_path else None,
+        }
+
+    def disks(self):
+        now = time.monotonic()
+        if now - self._disks_ts > 60 or not self._disks:
+            self._disks = list_disks(self.cfg["oled_disk_min_gb"])
+            self._disks_ts = now
+        return self._disks
+
+    # -- speedtest background loop (started by the daemon) --
+    def speedtest_loop(self):
+        time.sleep(20)   # let the network settle after boot
+        interval = self.cfg["oled_speedtest_interval"]
+        while self._alive:
+            v = run_speedtest(self.cfg["oled_speedtest_url"])
+            if v:
+                self.speed_mbps = v
+                self.speed_ts = time.time()
+                self.log(f"[pironman-extend] speedtest: {v:.0f} Mbps")
+            for _ in range(int(max(60, interval))):
+                if not self._alive:
+                    return
+                time.sleep(1)
+
+    # -- icons (small monochrome, drawn top-left at (x,y), box size s) --
+    def _icon(self, d, name, x=0, y=0, s=14):
+        f = 1
+        if name == "cpu":
+            a, b, c, e = x + 3, y + 3, x + s - 3, y + s - 3
+            d.rectangle((a, b, c, e), outline=f)
+            for i in range(3):
+                px = a + 1 + i * ((c - a) // 2)
+                d.line((px, y, px, b), fill=f); d.line((px, e, px, y + s), fill=f)
+                py = b + 1 + i * ((e - b) // 2)
+                d.line((x, py, a, py), fill=f); d.line((c, py, x + s, py), fill=f)
+        elif name == "temp":
+            cx = x + s // 2
+            d.rectangle((cx - 2, y + 2, cx + 2, y + s - 5), outline=f)
+            d.ellipse((cx - 4, y + s - 7, cx + 4, y + s - 1), outline=f)
+            d.rectangle((cx - 1, y + s // 2, cx + 1, y + s - 4), fill=f)
+            d.ellipse((cx - 3, y + s - 6, cx + 3, y + s - 2), fill=f)
+        elif name == "disk":
+            d.ellipse((x + 2, y + 2, x + s - 2, y + 7), outline=f)
+            d.line((x + 2, y + 4, x + 2, y + s - 4), fill=f)
+            d.line((x + s - 2, y + 4, x + s - 2, y + s - 4), fill=f)
+            d.ellipse((x + 2, y + s - 6, x + s - 2, y + s - 1), outline=f)
+        elif name == "gauge":
+            d.arc((x + 1, y + 3, x + s - 1, y + s + 3), 180, 360, fill=f)
+            cx, cy = x + s // 2, y + s - 2
+            d.line((cx, cy, x + s - 4, y + 5), fill=f)
+        elif name == "ram":
+            d.rectangle((x + 2, y + 4, x + s - 2, y + s - 4), outline=f)
+            for i in range(x + 4, x + s - 2, 3):
+                d.line((i, y + s - 4, i, y + s - 2), fill=f)
+            d.rectangle((x + 5, y + 6, x + s - 5, y + 8), fill=f)
+        elif name == "clock":
+            d.ellipse((x + 2, y + 2, x + s - 2, y + s - 2), outline=f)
+            cx, cy = x + s // 2, y + s // 2
+            d.line((cx, cy, cx, y + 4), fill=f); d.line((cx, cy, x + s - 5, cy), fill=f)
+        elif name == "down":
+            cx = x + s // 2
+            d.line((cx, y + 2, cx, y + s - 6), fill=f)
+            d.line((cx, y + s - 6, cx - 4, y + s - 10), fill=f)
+            d.line((cx, y + s - 6, cx + 4, y + s - 10), fill=f)
+            d.line((x + 2, y + s - 3, x + s - 2, y + s - 3), fill=f)
+        elif name == "star":
+            cx, cy = x + s // 2, y + s // 2
+            d.line((cx, y + 1, cx, y + s - 1), fill=f); d.line((x + 1, cy, x + s - 1, cy), fill=f)
+            d.line((x + 2, y + 2, x + s - 2, y + s - 2), fill=f)
+            d.line((x + 2, y + s - 2, x + s - 2, y + 2), fill=f)
+
+    # -- render primitives (all return a 1-bit 128x64 image) --
+    def _blank(self, invert=False):
+        Image = self.PIL[0]
+        return Image.new("1", (self.cfg["oled_width"], self.cfg["oled_height"]), 1 if invert else 0)
+
+    def _draw(self, img):
+        from PIL import ImageDraw
+        return ImageDraw.Draw(img)
+
+    def render_metric(self, spec):
+        W, H = self.cfg["oled_width"], self.cfg["oled_height"]
+        img = self._blank()
+        d = self._draw(img)
+        self._icon(d, spec.get("icon", "cpu"), 0, 0, 14)
+        d.text((17, 1), spec["title"], font=self._font(11), fill=1)
+        big, unit = spec["big"], spec.get("unit", "")
+        fb = self._font(28)
+        d.text((4, 15), big, font=fb, fill=1)
+        if unit:
+            bw = d.textlength(big, font=fb)
+            d.text((6 + bw, 30), unit, font=self._font(11), fill=1)
+        sub, bar = spec.get("sub"), spec.get("bar")
+        if sub:
+            d.text((2, 49), sub, font=self._font(10), fill=1)
+        if bar is not None:
+            w = int(min(bar, 100) / 100.0 * (W - 4))
+            d.rectangle((2, H - 5, W - 3, H - 1), outline=1)
+            if w > 0:
+                d.rectangle((2, H - 5, 2 + w, H - 1), fill=1)
+        return img
+
+    def render_clock(self):
+        import time as _t
+        W = self.cfg["oled_width"]
+        lt = _t.localtime()
+        img = self._blank()
+        d = self._draw(img)
+        self._icon(d, "clock", 0, 0, 14)
+        d.text((17, 1), "TARIH / SAAT", font=self._font(11), fill=1)
+        hm = _t.strftime("%H:%M", lt)
+        fb = self._font(30)
+        w = d.textlength(hm, font=fb)
+        d.text((int((W - w) // 2), 14), hm, font=fb, fill=1)
+        ds = _t.strftime("%d.%m.%Y", lt)
+        f2 = self._font(12)
+        w2 = d.textlength(ds, font=f2)
+        d.text((int((W - w2) // 2), 46), ds, font=f2, fill=1)
+        day = TR_DAYS[lt.tm_wday]
+        # weekday to the right of nothing -> put small under date already tight; overlay day at bottom-right
+        return img
+
+    def render_banner(self):
+        lines = self.cfg["oled_banner"]
+        img = self.render_text(lines, size=None, align="center", invert=False)
+        d = self._draw(img)
+        self._icon(d, "star", 2, 2, 12)
+        self._icon(d, "star", self.cfg["oled_width"] - 14, 2, 12)
+        return img
+
+    def render_anim(self, name, frame):
+        img = self._blank()
+        d = self._draw(img)
+        if name == "pacman":
+            self._anim_pacman(d, frame)
+        elif name == "faces":
+            self._anim_faces(d, frame)
+        elif name == "dots":
+            self._anim_dots(d, frame)
+        elif name == "cat":
+            self._anim_cat(d, frame)
+        else:
+            self._anim_dots(d, frame)
+        return img
+
+    def _anim_pacman(self, d, frame):
+        cx, cy, r = 26, 34, 15
+        if frame % 2 == 0:
+            d.pieslice((cx - r, cy - r, cx + r, cy + r), 32, 328, fill=1)
+        else:
+            d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=1)
+        d.ellipse((cx - 3, cy - 10, cx + 1, cy - 6), fill=0)
+        for i in range(6):
+            x = 56 + ((i * 16 - frame * 7) % 80)
+            d.ellipse((x - 2, cy - 2, x + 2, cy + 2), fill=1)
+        d.text((30, 2), "PAC-MAN", font=self._font(10), fill=1)
+
+    def _anim_faces(self, d, frame):
+        cx, cy, r = 64, 34, 24
+        d.ellipse((cx - r, cy - r, cx + r, cy + r), outline=1)
+        exp = frame % 4
+        if exp == 2:  # wink
+            d.ellipse((cx - 13, cy - 8, cx - 7, cy - 2), fill=1)
+            d.line((cx + 7, cy - 5, cx + 13, cy - 5), fill=1)
+        else:
+            d.ellipse((cx - 13, cy - 8, cx - 7, cy - 2), fill=1)
+            d.ellipse((cx + 7, cy - 8, cx + 13, cy - 2), fill=1)
+        if exp in (0, 2):
+            d.arc((cx - 12, cy - 2, cx + 12, cy + 16), 10, 170, fill=1)   # smile
+        elif exp == 1:
+            d.line((cx - 10, cy + 9, cx + 10, cy + 9), fill=1)            # neutral
+        else:
+            d.arc((cx - 12, cy + 6, cx + 12, cy + 24), 190, 350, fill=1)  # sad
+
+    def _anim_dots(self, d, frame):
+        W = self.cfg["oled_width"]
+        for i in range(3):
+            up = (frame % 3) == i
+            x = W // 2 - 22 + i * 18
+            y = 30 - (8 if up else 0)
+            d.ellipse((x, y, x + 11, y + 11), fill=1)
+        t = "YUKLENIYOR" + "." * (frame % 4)
+        d.text((28, 48), t, font=self._font(10), fill=1)
+
+    def _anim_cat(self, d, frame):
+        cx, cy = 64, 36
+        d.ellipse((cx - 20, cy - 14, cx + 20, cy + 16), outline=1)      # head
+        d.polygon((cx - 20, cy - 10, cx - 12, cy - 26, cx - 6, cy - 12), outline=1)  # ear L
+        d.polygon((cx + 20, cy - 10, cx + 12, cy - 26, cx + 6, cy - 12), outline=1)  # ear R
+        blink = frame % 4 == 0
+        if blink:
+            d.line((cx - 12, cy - 2, cx - 6, cy - 2), fill=1)
+            d.line((cx + 6, cy - 2, cx + 12, cy - 2), fill=1)
+        else:
+            d.ellipse((cx - 12, cy - 5, cx - 6, cy + 1), fill=1)
+            d.ellipse((cx + 6, cy - 5, cx + 12, cy + 1), fill=1)
+        d.line((cx, cy + 3, cx, cy + 7), fill=1)                         # nose/mouth
+        wag = 6 if frame % 2 else -6
+        for k in (-1, 1):
+            d.line((cx + k * 2, cy + 8, cx + k * 14, cy + 8 + wag // 2), fill=1)  # whisker-ish tail wag
+        d.text((44, 2), "CAT", font=self._font(10), fill=1)
+
+    def render_alert(self, alert, invert):
+        W = self.cfg["oled_width"]
+        title, detail = alert
+        img = self._blank(invert=invert)
+        d = self._draw(img)
+        fg = 0 if invert else 1
+        d.text((2, 0), "!!! PROBLEM !!!", font=self._font(12), fill=fg)
+        fm = self._font(15)
+        tw = d.textlength(title, font=fm)
+        d.text((max(2, int((W - tw) // 2)), 22), title, font=fm, fill=fg)
+        fs = self._font(11)
+        dw = d.textlength(detail, font=fs)
+        d.text((max(2, int((W - dw) // 2)), 46), detail, font=fs, fill=fg)
+        return img
+
+    def render_text(self, lines, size=None, align="center", invert=False):
+        W, H = self.cfg["oled_width"], self.cfg["oled_height"]
+        img = self._blank(invert=invert)
+        d = self._draw(img)
+        fg = 0 if invert else 1
+        n = max(1, len(lines))
+        if size is None:
+            size = max(8, min(40, (H // n) - 2))
+        font = self._font(size)
+        lh = H / n
+        for i, line in enumerate(lines):
+            w = d.textlength(line, font=font)
+            x = 0 if align == "left" else max(0, int((W - w) // 2))
+            y = int(i * lh + (lh - size) / 2)
+            d.text((x, y), line, font=font, fill=fg)
+        return img
+
+    def render_image(self, raw, fit="contain", invert=False, threshold=128):
+        from PIL import Image, ImageOps
+        W, H = self.cfg["oled_width"], self.cfg["oled_height"]
+        im = Image.open(io.BytesIO(raw)).convert("L")
+        if invert:
+            im = ImageOps.invert(im)
+        if fit == "stretch":
+            im = im.resize((W, H))
+        else:
+            im = im.copy()
+            im.thumbnail((W, H))
+        bw = im.point(lambda p: 255 if p >= threshold else 0).convert("1")
+        canvas = Image.new("1", (W, H), 0)
+        canvas.paste(bw, ((W - bw.width) // 2, (H - bw.height) // 2))
+        return canvas
+
+    # -- page list (dynamic: disks expand, ram is conditional) --
+    def build_pages(self, m):
+        out = []
+        for tok in self.pages:
+            if tok == "cpu":
+                out.append({"type": "metric", "icon": "temp", "title": "CPU SICAKLIK",
+                            "big": "--" if m["cpu"] is None else f"{m['cpu']:.0f}", "unit": "°C"})
+            elif tok == "ssd":
+                out.append({"type": "metric", "icon": "temp", "title": "SSD SICAKLIK",
+                            "big": "--" if m["ssd"] is None else f"{m['ssd']:.0f}", "unit": "°C"})
+            elif tok == "load":
+                v = m["load"]
+                pc = None if v is None else v / self.nproc * 100.0
+                out.append({"type": "metric", "icon": "gauge", "title": "SISTEM YUK",
+                            "big": "--" if v is None else f"{v:.2f}", "unit": "",
+                            "sub": None if v is None else f"{self.nproc} cekirdek  %{pc:.0f}",
+                            "bar": None if pc is None else min(pc, 100)})
+            elif tok == "ram":
+                v = m["ram"]
+                if v is not None and v >= self.thresholds["ram"][0]:
+                    out.append({"type": "metric", "icon": "ram", "title": "RAM UYARI",
+                                "big": f"{v:.0f}", "unit": "%", "bar": v,
+                                "sub": "bellek dolmak uzere"})
+            elif tok == "disks":
+                for dsk in self.disks():
+                    sub = (f"{human_bytes(dsk['used'])}/{human_bytes(dsk['total'])}"
+                           if dsk["pct"] is not None else f"{human_bytes(dsk['total'])} - mount yok")
+                    out.append({"type": "metric", "icon": "disk", "title": dsk["name"],
+                                "big": "--" if dsk["pct"] is None else f"{dsk['pct']:.0f}",
+                                "unit": "" if dsk["pct"] is None else "%",
+                                "sub": sub, "bar": dsk["pct"]})
+            elif tok == "clock":
+                out.append({"type": "clock"})
+            elif tok == "banner":
+                out.append({"type": "banner", "dwell": self.cfg.get("oled_banner_dwell", 6)})
+            elif tok == "speed":
+                if self.speed_mbps is None:
+                    big, sub = "--", "olculuyor..."
+                else:
+                    big = f"{self.speed_mbps:.0f}"
+                    age = "" if not self.speed_ts else f"{int((time.time() - self.speed_ts) / 60)} dk once"
+                    sub = f"Mbps indirme  {age}"
+                out.append({"type": "metric", "icon": "down", "title": "INDIRME HIZI",
+                            "big": big, "unit": "" if big == "--" else "Mb", "sub": sub})
+            elif tok.startswith("anim:"):
+                out.append({"type": "anim", "name": tok.split(":", 1)[1],
+                            "dwell": self.cfg["oled_anim_dwell"]})
+        return out
+
+    def _render_spec(self, spec):
+        t = spec["type"]
+        if t == "metric":
+            return self.render_metric(spec)
+        if t == "clock":
+            return self.render_clock()
+        if t == "banner":
+            return self.render_banner()
+        if t == "anim":
+            return self.render_anim(spec["name"], self.anim_frame)
+        return self._blank()
+
+    # -- API-driven overrides --
+    def _set_override(self, image, duration, kind):
+        exp = None if not duration else time.monotonic() + float(duration)
+        with self.lock:
+            self.override = {"image": image, "expires": exp, "kind": kind}
+
+    def set_text(self, lines, size=None, align="center", invert=False, duration=0):
+        if not self.dev:
+            raise RuntimeError("oled disabled")
+        self._set_override(self.render_text(lines, size, align, invert), duration, "text")
+
+    def set_image(self, raw, fit="contain", invert=False, threshold=128, duration=0):
+        if not self.dev:
+            raise RuntimeError("oled disabled")
+        self._set_override(self.render_image(raw, fit, invert, threshold), duration, "image")
+
+    def clear_override(self):
+        with self.lock:
+            self.override = None
+
+    def set_enabled(self, val):
+        with self.lock:
+            self.enabled = bool(val) and self.dev is not None
+            self._cleared = False
+
+    def set_contrast(self, val):
+        if self.dev:
+            self.dev.contrast(max(0, min(255, int(val))))
+
+    # -- main render tick --
+    def render_once(self):
+        if not self.dev:
+            return
+        now = time.monotonic()
+        dt = (now - self._last_render) if self._last_render else 0.0
+        self._last_render = now
+        if not self.enabled:
+            if not self._cleared:
+                self.dev.clear()
+                self._cleared = True
+                self.showing = "off"
+            return
+        self._cleared = False
+        m = self.read_metrics()
+        alerts = oled_build_alerts(m, read_throttled(), root_readonly(),
+                                   self.thresholds, self.nproc)
+        with self.lock:
+            ov = self.override
+            if ov and ov["expires"] is not None and now >= ov["expires"]:
+                self.override = ov = None
+
+        if alerts and (self.cfg["oled_alarm_override"] or not ov):
+            step = max(1, int(self.cfg["oled_alert_rot"] / max(0.2, self.cfg["oled_refresh"])))
+            a = alerts[(self.tick // step) % len(alerts)]
+            self.dev.display(self.render_alert(a, invert=(self.tick % 2 == 0)))
+            self.showing = f"alarm:{a[0]}"
+            self._cur_is_anim = False
+            self.dwell = 0.0
+            self.tick += 1
+            return
+        if ov:
+            self.dev.display(ov["image"])
+            self.showing = f"override:{ov['kind']}"
+            self._cur_is_anim = False
+            self.tick += 1
+            return
+
+        pages = self.build_pages(m)
+        if not pages:
+            self.tick += 1
+            return
+        self.idx %= len(pages)
+        spec = pages[self.idx]
+        self._cur_is_anim = spec["type"] == "anim"
+        self.dev.display(self._render_spec(spec))
+        self.showing = spec.get("title") or spec["type"] + (f":{spec.get('name','')}" if spec["type"] == "anim" else "")
+        if self._cur_is_anim:
+            self.anim_frame += 1
+        self.dwell += dt
+        if self.dwell >= spec.get("dwell", self.cfg["oled_page_dwell"]):
+            self.dwell = 0.0
+            self.anim_frame = 0
+            self.idx = (self.idx + 1) % len(pages)
+        self.tick += 1
+
+    def next_delay(self):
+        return self.cfg["oled_anim_frame"] if self._cur_is_anim else self.cfg["oled_refresh"]
+
+    def status(self):
+        m = self.read_metrics() if self.dev else {}
+        with self.lock:
+            ov = self.override
+            exp_in = None if not ov or ov["expires"] is None else max(0, round(ov["expires"] - time.monotonic(), 1))
+        alerts = []
+        if self.dev and self.enabled:
+            alerts = [a[0] for a in oled_build_alerts(
+                m, read_throttled(), root_readonly(), self.thresholds, self.nproc)]
+        return {
+            "enabled": self.enabled, "available": self.dev is not None,
+            "showing": self.showing, "pages": self.pages,
+            "disks": [{"name": d["name"], "size": human_bytes(d["total"]),
+                       "used_pct": None if d["pct"] is None else round(d["pct"], 1)} for d in self.disks()] if self.dev else [],
+            "download_mbps": None if self.speed_mbps is None else round(self.speed_mbps, 1),
+            "override": None if not ov else {"kind": ov["kind"], "expires_in": exp_in},
+            "alerts": alerts,
+            "metrics": {k: (round(v, 1) if isinstance(v, float) else v) for k, v in m.items()},
+        }
+
+    def close(self):
+        self._alive = False
+
+
 # ---- daemon -----------------------------------------------------------------
 class Daemon:
     def __init__(self, cfg):
@@ -382,6 +1121,7 @@ class Daemon:
         self.fans = [Fan(self.h, f, self.log) for f in cfg["fans"]]
         self.by_name = {f.name: f for f in self.fans}
         self.rgb = RgbController(cfg, self.log)
+        self.oled = OledController(cfg, self.log, lambda: self.temp or cpu_temp(cfg["temp_path"]))
         self.temp = 0.0
         self.running = True
 
@@ -438,15 +1178,25 @@ class Daemon:
                     f.set_led(level)
             time.sleep(period)
 
+    def oled_loop(self):
+        while self.running:
+            try:
+                self.oled.render_once()
+            except Exception as e:
+                self.log(f"[pironman-extend] oled render error: {e}")
+            time.sleep(self.oled.next_delay())
+
     def status(self):
         return {"cpu_temp": round(self.temp, 1),
                 "fans": [f.status() for f in self.fans],
-                "rgb": self.rgb.status(self.temp)}
+                "rgb": self.rgb.status(self.temp),
+                "oled": self.oled.status()}
 
     def close(self):
         self.running = False
         for f in self.fans:
             f.close()
+        self.oled.close()
         lgpio.gpiochip_close(self.h)
 
 
@@ -502,6 +1252,8 @@ def make_handler(daemon):
                 return self._send(200, daemon.status())
             if p == f"{API}/rgb":
                 return self._send(200, daemon.rgb.status(daemon.temp))
+            if p == f"{API}/oled":
+                return self._send(200, daemon.oled.status())
             if p in (f"{API}/fans", f"{API}/fans".rstrip("/")):
                 return self._send(200, {"cpu_temp": daemon.temp,
                                         "fans": [f.status() for f in daemon.fans]})
@@ -521,6 +1273,49 @@ def make_handler(daemon):
                 if "enabled" in body:
                     daemon.rgb.set_enabled(body["enabled"])
                 return self._send(200, daemon.rgb.status(daemon.temp))
+            if p == f"{API}/oled":
+                o = daemon.oled
+                if "enabled" in body:
+                    o.set_enabled(body["enabled"])
+                if "contrast" in body:
+                    o.set_contrast(body["contrast"])
+                return self._send(200, o.status())
+            if p == f"{API}/oled/text":
+                o = daemon.oled
+                if not o.dev:
+                    return self._send(409, {"error": "oled unavailable"})
+                lines = body.get("lines")
+                if lines is None:
+                    lines = str(body.get("text", "")).split("\n")
+                if not any(str(x).strip() for x in lines):
+                    return self._send(400, {"error": "text or lines required"})
+                try:
+                    o.set_text([str(x) for x in lines], size=body.get("size"),
+                               align=body.get("align", "center"),
+                               invert=bool(body.get("invert", False)),
+                               duration=float(body.get("duration", 0)))
+                except Exception as e:
+                    return self._send(400, {"error": str(e)})
+                return self._send(200, o.status())
+            if p == f"{API}/oled/image":
+                o = daemon.oled
+                if not o.dev:
+                    return self._send(409, {"error": "oled unavailable"})
+                b64 = body.get("image_b64", "")
+                if not b64:
+                    return self._send(400, {"error": "image_b64 required (PNG/JP/BMP)"})
+                try:
+                    raw = base64.b64decode(b64.split(",", 1)[-1])
+                    o.set_image(raw, fit=body.get("fit", "contain"),
+                                invert=bool(body.get("invert", False)),
+                                threshold=int(body.get("threshold", 128)),
+                                duration=float(body.get("duration", 0)))
+                except Exception as e:
+                    return self._send(400, {"error": f"bad image: {e}"})
+                return self._send(200, o.status())
+            if p == f"{API}/oled/clear":
+                daemon.oled.clear_override()
+                return self._send(200, daemon.oled.status())
             if p.startswith(f"{API}/fans/"):
                 name = urllib.parse.unquote(p.split(f"{API}/fans/", 1)[1])
                 f = daemon.by_name.get(name)
@@ -562,7 +1357,12 @@ def main():
     if any(f.led_pin is not None for f in d.fans):
         threading.Thread(target=d.led_loop, daemon=True).start()
     threading.Thread(target=d.rgb_loop, daemon=True).start()
+    if d.oled.dev is not None:
+        threading.Thread(target=d.oled_loop, daemon=True).start()
+        if any(str(p).startswith("speed") for p in cfg["oled_pages"]):
+            threading.Thread(target=d.oled.speedtest_loop, daemon=True).start()
     print(f"[pironman-extend] up: {len(d.fans)} fan(s), rgb_enabled={d.rgb.enabled}, "
+          f"oled={'on' if d.oled.dev else 'off'}, "
           f"API on {cfg['bind']}:{cfg['http_port']}", flush=True)
 
     def stop(*_):
@@ -591,6 +1391,23 @@ def selftest():
     assert onoff_target(False, 55, 52, 46) == 100 and onoff_target(True, 47, 52, 46) == 100
     assert onoff_target(True, 45, 52, 46) == 0
     assert quantize(133, 8) == 136
+    # --- OLED anomaly/threshold logic ---
+    th = DEFAULTS["oled_thresholds"]
+    assert oled_severity("cpu", 85, th, 4) == 2
+    assert oled_severity("cpu", 72, th, 4) == 1
+    assert oled_severity("cpu", 50, th, 4) == 0
+    assert oled_severity("load", 4 * 3.0, th, 4) == 2      # per-core 3.0
+    assert oled_severity("load", 4 * 1.6, th, 4) == 1
+    assert oled_severity("cpu", None, th, 4) == 0
+    clean = {"cpu": 40, "load": 1.0, "disk": 30, "ram": 50, "ssd": 30}
+    assert oled_build_alerts(clean, 0, False, th, 4) == []
+    assert oled_build_alerts(clean, 0x1, False, th, 4)[0][0] == "DUSUK VOLTAJ"
+    assert oled_build_alerts(clean, 0, True, th, 4)[0][0] == "DISK SALT-OKUR"
+    assert oled_build_alerts({**clean, "cpu": 90}, 0, False, th, 4)[0][0] == "CPU KRITIK"
+    assert human_bytes(476 * 1024**3) == "476G"
+    assert human_bytes(1000204140544) == "932G"
+    assert human_bytes(int(1.5 * 1024**4)) == "1.5T"
+    assert human_bytes(None) == "-"
     print("selftest OK")
 
 
