@@ -56,6 +56,12 @@ Import it under *Dashboards → New → Import*. It expects two datasources with
 | --------------------- | ------------------------------------------------------------------------------- | -------------------- |
 | `pironman_influxdb` | InfluxDB, database`pironman5-max`                                             | all graphs and stats |
 | `pironman_api`      | [Infinity](https://grafana.com/grafana/plugins/yesoreyeram-infinity-datasource/) | the button panels    |
+| `pironman_extend`   | [Infinity](https://grafana.com/grafana/plugins/yesoreyeram-infinity-datasource/) (base `http://localhost:34010`) | the OLED status table |
+
+It also needs the [**Business Forms**](https://grafana.com/grafana/plugins/volkovlabs-form-panel/) panel
+(`volkovlabs-form-panel`) for the Noctua speed **slider**
+(`grafana-cli plugins install volkovlabs-form-panel`, then restart Grafana). The slider POSTs
+`{"mode":"manual","percent":N}` to `/fans/noctua_nf_a4x10`; AUTO/ON/OFF stay as buttons.
 
 The `pe_server_url` variable (`host:port`, default `localhost:34010`) sets where the buttons
 send their requests. They call `http://${pe_server_url}/api/v1/...` **from the browser**, so

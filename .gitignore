@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
 state.json
+.vscode/
+.DS_Store
