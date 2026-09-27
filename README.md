@@ -85,12 +85,12 @@ an optional open-collector tach on GPIO17 for real RPM. Enable the PWM output on
 dtoverlay=pwm,pin=18,func=2
 ```
 
-| Noctua wire | RPi 40-pin      | Signal                 | Wire |
-| ----------- | --------------- | ---------------------- | ---- |
-| +5V         | **4**     | 5V                     | 🟡   |
-| GND         | **6**     | GND                    | ⬛   |
-| PWM         | **12**    | GPIO18 (PWM0_CHAN2, 25 kHz) | 🟦   |
-| Tach / RPM  | **11**    | GPIO17 (input, pull-up) | 🟩   |
+| Noctua wire | RPi 40-pin   | Signal                      | Wire |
+| ----------- | ------------ | --------------------------- | ---- |
+| +5V         | **4**  | 5V                          | 🟡   |
+| GND         | **6**  | GND                         | ⬛   |
+| PWM         | **12** | GPIO18 (PWM0_CHAN2, 25 kHz) | 🟦   |
+| Tach / RPM  | **11** | GPIO17 (input, pull-up)     | 🟩   |
 
 ```
                 Raspberry Pi 5 — 40-pin header (top view)
@@ -129,23 +129,21 @@ on as a boost). Omit `tach_pin` if the green wire isn't connected (`rpm` stays
 A second, independent OLED on its **own** software I2C bus, so it never clashes
 with Pironman's own 0x3c OLED on `/dev/i2c-1`.
 
-### Which panel is this? (it was mislabeled)
-
-The unit was sold as a *"Waveshare 0.49″ 64×32"* but that is **wrong** — the panel
-that actually ships is:
-
-| Property | Value |
-| --- | --- |
-| Panel marking | **GME12864-43** (silkscreen on the flex tail) |
-| Resolution | **128 × 64** (not 64×32 — verify with the geometry test below) |
-| Driver IC | **SSD1315** (SSD1306-compatible) |
-| Colours | **top ~16 px yellow, rest blue** (two-zone monochrome) |
-| Interface | I²C only, 4-pin header `GND · VCC · SCL · SDA`, addr `0x3c` |
-| Voltage | 3.3 V / 5 V (drive from **3.3 V**, see wiring) |
+### Which panel is this?
 
 This is the ubiquitous generic **0.96″ 128×64 yellow/blue I²C OLED** (GME12864
 class), *not* a genuine Waveshare part number — it doesn't appear on Waveshare's
 [OLED page](https://www.waveshare.com/product/raspberry-pi/displays/oled.htm).
+
+| Property      | Value                                                                   |
+| ------------- | ----------------------------------------------------------------------- |
+| Panel marking | **GME12864-43** (silkscreen on the flex tail)                     |
+| Resolution    | **128 × 64** (not 64×32 — verify with the geometry test below) |
+| Driver IC     | **SSD1315** (SSD1306-compatible)                                  |
+| Colours       | **top ~16 px yellow, rest blue** (two-zone monochrome)            |
+| Interface     | I²C only, 4-pin header`GND · VCC · SCL · SDA`, addr `0x3c`      |
+| Voltage       | 3.3 V / 5 V (drive from**3.3 V**, see wiring)                     |
+
 The closest genuine Waveshare equivalent is the
 [**0.96inch OLED Module (C)**](https://www.waveshare.com/0.96inch-oled-module-c.htm)
 (SSD1315, 128×64, upper-yellow/lower-blue) — but that one exposes a **7-pin**
@@ -164,6 +162,32 @@ Code treats it as a plain 128×64 SSD1306/SSD1315 over I²C, which is what matte
 Module silkscreen order is `GND · VCC · SCL · SDA`; match by pin name. Power from
 **3V3** so the module's I2C pull-ups stay at 3.3 V (safe for the Pi GPIO).
 
+All four wires land in one tidy block (pins 16–20), well clear of the fan on 4/6/12:
+
+```
+                   Raspberry Pi 5 — 40-pin header (top view)
+                      ┌─────────────────────────────────┐
+               GPIO22 │ (15) ●   ● (16) │ GPIO23 ●────── 🟠 SCL  (turuncu)
+ 🔴 VCC (3V3) ───────●│ (17) ●   ● (18) │ GPIO24 ●────── 🟡 SDA  (sarı)
+               GPIO10 │ (19) ●   ● (20) │ GND    ●────── 🟤 GND  (kahverengi)
+                      └─────────────────────────────────┘
+   🔴 VCC → pin 17 (3V3)   🟠 SCL → pin 16 (GPIO23)
+   🟡 SDA → pin 18 (GPIO24)  🟤 GND → pin 20 (GND)      ⚠ VCC = 3V3, NEVER 5V
+```
+
+Mapping the module's 4-pin header (silkscreen `GND VCC SCL SDA`) to the wires and pins:
+
+```
+        OLED module header (rear)          RPi pin
+        ┌─────┬─────┬─────┬─────┐
+        │ GND │ VCC │ SCL │ SDA │   silkscreen
+        │ 🟤  │ 🔴  │ 🟠  │ 🟡  │   wire colour
+        └──┬──┴──┬──┴──┬──┴──┬──┘
+           │     │     │     │
+          20    17    16    18        ← RPi 40-pin number
+         (GND) (3V3)(GPIO23)(GPIO24)
+```
+
 ### Enable the I2C bus (one-time)
 
 Add to `/boot/firmware/config.txt`, then reboot:
@@ -180,14 +204,14 @@ in the service's Python (`apt install python3-luma.oled`, or the pironman venv).
 Draw a full-frame test pattern; all four corner labels + both diagonals must show:
 
 ```
-┌──────────────────────┐
-│TL                  TR│   4 corners visible + a full border + an X
-│  ╲              ╱     │   → panel is 128×64, no offset needed.
-│     ╲       ╱        │   Only a centred band lit / garbage on the
-│        ╲ ╱           │   sides → wrong resolution, fix oled_width/height.
-│     ╱      ╲         │
-│BL                  BR│
-└──────────────────────┘
+┌─────────────────┐
+│TL ╲         ╱ TR│   4 corners visible + a full border + an X
+│     ╲     ╱     │   → panel is 128×64, no offset needed.
+│       ╲ ╱       │   Only a centred band lit / garbage on the
+│       ╱ ╲       │   sides → wrong resolution, fix oled_width/height.
+│     ╱     ╲     │
+│BL /         ╲ BR│
+└─────────────────┘
 ```
 
 ### Screen catalogue (128×64)
@@ -270,21 +294,21 @@ curl -sX POST localhost:34010/api/v1/oled -d '{"enabled":false}'   # blank it
 
 ### Configuration (`config.json` → `oled_*`)
 
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `oled_enabled` | `true` | master on/off |
-| `oled_i2c_port` / `oled_i2c_addr` | `3` / `"0x3c"` | which bus + address |
-| `oled_width` / `oled_height` | `128` / `64` | panel resolution |
-| `oled_pages` | see below | rotation order (tokens) |
-| `oled_page_dwell` | `60` | seconds per metric page |
-| `oled_refresh` | `2` | scan/redraw tick (anomaly latency) |
-| `oled_anim_dwell` / `oled_anim_frame` | `8` / `0.2` | anim page length / frame delay (~5 fps) |
-| `oled_banner` / `oled_banner_dwell` | `["FXerkan's","RPIFX"]` / `6` | banner text + duration |
-| `oled_thresholds` | `{cpu,load,ram,disk,ssd:[warn,crit]}` | alarm/warn limits (load is per-core) |
-| `oled_disk_min_gb` | `16` | ignore drives smaller than this |
-| `oled_speedtest_interval` / `oled_speedtest_url` | `21600` / Cloudflare | speedtest period + HTTP fallback URL |
-| `oled_alarm_override` | `true` | alarms preempt pushed text/image |
-| `oled_contrast` | `255` | 0–255 |
+| Key                                                  | Default                                 | Meaning                                 |
+| ---------------------------------------------------- | --------------------------------------- | --------------------------------------- |
+| `oled_enabled`                                     | `true`                                | master on/off                           |
+| `oled_i2c_port` / `oled_i2c_addr`                | `3` / `"0x3c"`                      | which bus + address                     |
+| `oled_width` / `oled_height`                     | `128` / `64`                        | panel resolution                        |
+| `oled_pages`                                       | see below                               | rotation order (tokens)                 |
+| `oled_page_dwell`                                  | `60`                                  | seconds per metric page                 |
+| `oled_refresh`                                     | `2`                                   | scan/redraw tick (anomaly latency)      |
+| `oled_anim_dwell` / `oled_anim_frame`            | `8` / `0.2`                         | anim page length / frame delay (~5 fps) |
+| `oled_banner` / `oled_banner_dwell`              | `["FXerkan's","RPIFX"]` / `6`       | banner text + duration                  |
+| `oled_thresholds`                                  | `{cpu,load,ram,disk,ssd:[warn,crit]}` | alarm/warn limits (load is per-core)    |
+| `oled_disk_min_gb`                                 | `16`                                  | ignore drives smaller than this         |
+| `oled_speedtest_interval` / `oled_speedtest_url` | `21600` / Cloudflare                  | speedtest period + HTTP fallback URL    |
+| `oled_alarm_override`                              | `true`                                | alarms preempt pushed text/image        |
+| `oled_contrast`                                    | `255`                                 | 0–255                                  |
 
 **Page tokens** for `oled_pages`: `cpu` `load` `ssd` (metrics) · `disks` (expands
 to one page **per drive**, name + size + usage) · `ram` (shown **only** when RAM ≥
