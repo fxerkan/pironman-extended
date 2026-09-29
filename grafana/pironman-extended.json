@@ -1,0 +1,2536 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 23,
+      "title": "Noctua PWM fan (curve, GPIO18 25kHz)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "pironman_api"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "infinitePan": false,
+        "inlineEditing": false,
+        "panZoom": false,
+        "root": {
+          "background": {
+            "color": {
+              "fixed": "transparent"
+            }
+          },
+          "border": {
+            "color": {
+              "fixed": "dark-green"
+            }
+          },
+          "constraint": {
+            "horizontal": "left",
+            "vertical": "top"
+          },
+          "elements": [
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "green"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"mode\": \"auto\"}",
+                  "endpoint": "http://${pe_server_url}/api/v1/fans/noctua_nf_a4x10",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "primary"
+                },
+                "text": {
+                  "fixed": "AUTO",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "noc_auto",
+              "placement": {
+                "height": 34,
+                "left": 8,
+                "rotation": 0,
+                "top": 8,
+                "width": 96
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "green"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"mode\": \"manual\", \"percent\": 100}",
+                  "endpoint": "http://${pe_server_url}/api/v1/fans/noctua_nf_a4x10",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "secondary"
+                },
+                "text": {
+                  "fixed": "ON",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "noc_on",
+              "placement": {
+                "height": 34,
+                "left": 112,
+                "rotation": 0,
+                "top": 8,
+                "width": 96
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "red"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"mode\": \"off\"}",
+                  "endpoint": "http://${pe_server_url}/api/v1/fans/noctua_nf_a4x10",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "destructive"
+                },
+                "text": {
+                  "fixed": "OFF",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "noc_off",
+              "placement": {
+                "height": 34,
+                "left": 216,
+                "rotation": 0,
+                "top": 8,
+                "width": 96
+              },
+              "type": "button"
+            }
+          ],
+          "name": "root",
+          "placement": {
+            "height": 100,
+            "left": 0,
+            "rotation": 0,
+            "top": 0,
+            "width": 100
+          },
+          "type": "frame"
+        },
+        "showAdvancedTypes": false,
+        "tooltip": {
+          "disableForOneClick": false,
+          "mode": "single"
+        },
+        "zoomToContent": false
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "rgb_enable",
+              "text": "",
+              "type": "boolean"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "pironman_api"
+          },
+          "filters": [],
+          "format": "table",
+          "global_query_id": "",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "data.system",
+          "source": "url",
+          "type": "json",
+          "url": "get-config",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Noctua — control",
+      "type": "canvas"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "pironman_extend"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 10,
+        "x": 6,
+        "y": 1
+      },
+      "id": 30,
+      "options": {
+        "buttonGroup": {
+          "orientation": "center",
+          "size": "sm"
+        },
+        "confirmModal": {
+          "body": "",
+          "columns": {
+            "include": [],
+            "name": "",
+            "newValue": "",
+            "oldValue": ""
+          },
+          "elementDisplayMode": "modified",
+          "title": "Confirm"
+        },
+        "elements": [
+          {
+            "helpMessage": "drag, then SET SPEED (manual override)",
+            "id": "speed_percent",
+            "labelWidth": 6,
+            "max": 100,
+            "min": 0,
+            "section": "",
+            "step": 1,
+            "title": "Speed",
+            "type": "slider",
+            "uid": "speed_percent",
+            "unit": "%",
+            "value": 50,
+            "width": null
+          }
+        ],
+        "initial": {
+          "code": "",
+          "contentType": "application/json",
+          "datasource": "",
+          "getPayload": "",
+          "header": [],
+          "method": "GET",
+          "url": "/api/datasources/proxy/uid/pironman_extend/api/v1/fans/noctua_nf_a4x10"
+        },
+        "layout": {
+          "orientation": "horizontal",
+          "padding": 8,
+          "variant": "single"
+        },
+        "reset": {
+          "code": "",
+          "confirm": false,
+          "contentType": "application/json",
+          "datasource": "",
+          "getPayload": "",
+          "method": "-",
+          "url": ""
+        },
+        "resetAction": {
+          "code": "",
+          "confirm": false,
+          "getPayload": "",
+          "mode": "initial"
+        },
+        "saveDefault": {
+          "enabled": false
+        },
+        "submit": {
+          "backgroundColor": "purple",
+          "foregroundColor": "",
+          "icon": "sliders-v-alt",
+          "text": "SET SPEED",
+          "variant": "primary"
+        },
+        "sync": false,
+        "update": {
+          "code": "",
+          "confirm": false,
+          "contentType": "application/json",
+          "datasource": "",
+          "getPayload": "const s = context.panel.elements.find(function (e) { return e.id === 'speed_percent'; });\nreturn { mode: 'manual', percent: s ? s.value : 50 };",
+          "header": [],
+          "method": "POST",
+          "payloadMode": "custom",
+          "updatedOnly": false,
+          "url": "/api/datasources/proxy/uid/pironman_extend/api/v1/fans/noctua_nf_a4x10"
+        }
+      },
+      "targets": [
+        {
+          "columns": [],
+          "data": "[]",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "pironman_extend"
+          },
+          "filters": [],
+          "format": "table",
+          "refId": "A",
+          "root_selector": "",
+          "source": "inline",
+          "type": "json"
+        }
+      ],
+      "title": "Noctua — speed slider (manual)",
+      "type": "volkovlabs-form-panel"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "pironman_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "pironman_influxdb"
+          },
+          "query": "SELECT last(\"speed_percent\") FROM \"case_fan\" WHERE (\"fan\" = 'noctua_nf_a4x10') AND $timeFilter",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "Noctua — speed",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "pironman_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "OFF"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "ON"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "pironman_influxdb"
+          },
+          "query": "SELECT last(\"state\") FROM \"case_fan\" WHERE (\"fan\" = 'noctua_nf_a4x10') AND $timeFilter",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "Noctua — running",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "pironman_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "rotrpm"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 5
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "pironman_influxdb"
+          },
+          "query": "SELECT last(\"rpm\") FROM \"case_fan\" WHERE (\"fan\" = 'noctua_nf_a4x10') AND $timeFilter",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "Noctua — RPM (tach on GPIO17)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "pironman_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Noctua speed"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 18,
+        "x": 6,
+        "y": 5
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "pironman_influxdb"
+          },
+          "query": "SELECT mean(\"speed_percent\") FROM \"case_fan\" WHERE (\"fan\" = 'noctua_nf_a4x10') AND $timeFilter GROUP BY time($__interval) fill(previous)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "Noctua — speed (%) over time",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "id": 24,
+      "title": "IceCube GPIO fan (on/off, GPIO6) + indicator LED (GPIO5)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "pironman_api"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 7,
+        "x": 0,
+        "y": 12
+      },
+      "id": 8,
+      "options": {
+        "infinitePan": false,
+        "inlineEditing": false,
+        "panZoom": false,
+        "root": {
+          "background": {
+            "color": {
+              "fixed": "transparent"
+            }
+          },
+          "border": {
+            "color": {
+              "fixed": "dark-green"
+            }
+          },
+          "constraint": {
+            "horizontal": "left",
+            "vertical": "top"
+          },
+          "elements": [
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "green"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"mode\": \"auto\"}",
+                  "endpoint": "http://${pe_server_url}/api/v1/fans/case_fans",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "primary"
+                },
+                "text": {
+                  "fixed": "AUTO",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "ice_auto",
+              "placement": {
+                "height": 34,
+                "left": 8,
+                "rotation": 0,
+                "top": 8,
+                "width": 100
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "green"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"mode\": \"manual\", \"percent\": 100}",
+                  "endpoint": "http://${pe_server_url}/api/v1/fans/case_fans",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "secondary"
+                },
+                "text": {
+                  "fixed": "ON 100%",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "ice_on",
+              "placement": {
+                "height": 34,
+                "left": 116,
+                "rotation": 0,
+                "top": 8,
+                "width": 100
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "red"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"mode\": \"off\"}",
+                  "endpoint": "http://${pe_server_url}/api/v1/fans/case_fans",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "destructive"
+                },
+                "text": {
+                  "fixed": "OFF",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "ice_off",
+              "placement": {
+                "height": 34,
+                "left": 224,
+                "rotation": 0,
+                "top": 8,
+                "width": 100
+              },
+              "type": "button"
+            }
+          ],
+          "name": "root",
+          "placement": {
+            "height": 100,
+            "left": 0,
+            "rotation": 0,
+            "top": 0,
+            "width": 100
+          },
+          "type": "frame"
+        },
+        "showAdvancedTypes": false,
+        "tooltip": {
+          "disableForOneClick": false,
+          "mode": "single"
+        },
+        "zoomToContent": false
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "rgb_enable",
+              "text": "",
+              "type": "boolean"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "pironman_api"
+          },
+          "filters": [],
+          "format": "table",
+          "global_query_id": "",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "data.system",
+          "source": "url",
+          "type": "json",
+          "url": "get-config",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "IceCube — fan control",
+      "type": "canvas"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "pironman_api"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 9,
+        "x": 7,
+        "y": 12
+      },
+      "id": 9,
+      "options": {
+        "infinitePan": false,
+        "inlineEditing": false,
+        "panZoom": false,
+        "root": {
+          "background": {
+            "color": {
+              "fixed": "transparent"
+            }
+          },
+          "border": {
+            "color": {
+              "fixed": "dark-green"
+            }
+          },
+          "constraint": {
+            "horizontal": "left",
+            "vertical": "top"
+          },
+          "elements": [
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "blue"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"led_mode\": \"follow\"}",
+                  "endpoint": "http://${pe_server_url}/api/v1/fans/case_fans",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "primary"
+                },
+                "text": {
+                  "fixed": "FOLLOW",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "led_follow",
+              "placement": {
+                "height": 34,
+                "left": 8,
+                "rotation": 0,
+                "top": 8,
+                "width": 100
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "blue"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"led_mode\": \"on\"}",
+                  "endpoint": "http://${pe_server_url}/api/v1/fans/case_fans",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "secondary"
+                },
+                "text": {
+                  "fixed": "ON",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "led_on",
+              "placement": {
+                "height": 34,
+                "left": 116,
+                "rotation": 0,
+                "top": 8,
+                "width": 100
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "blue"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"led_mode\": \"off\"}",
+                  "endpoint": "http://${pe_server_url}/api/v1/fans/case_fans",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "secondary"
+                },
+                "text": {
+                  "fixed": "OFF",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "led_off",
+              "placement": {
+                "height": 34,
+                "left": 224,
+                "rotation": 0,
+                "top": 8,
+                "width": 100
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "orange"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"led_mode\": \"warn\"}",
+                  "endpoint": "http://${pe_server_url}/api/v1/fans/case_fans",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "secondary"
+                },
+                "text": {
+                  "fixed": "WARN",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "led_warn",
+              "placement": {
+                "height": 34,
+                "left": 332,
+                "rotation": 0,
+                "top": 8,
+                "width": 100
+              },
+              "type": "button"
+            }
+          ],
+          "name": "root",
+          "placement": {
+            "height": 100,
+            "left": 0,
+            "rotation": 0,
+            "top": 0,
+            "width": 100
+          },
+          "type": "frame"
+        },
+        "showAdvancedTypes": false,
+        "tooltip": {
+          "disableForOneClick": false,
+          "mode": "single"
+        },
+        "zoomToContent": false
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "rgb_enable",
+              "text": "",
+              "type": "boolean"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "pironman_api"
+          },
+          "filters": [],
+          "format": "table",
+          "global_query_id": "",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "data.system",
+          "source": "url",
+          "type": "json",
+          "url": "get-config",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "IceCube — indicator LED",
+      "type": "canvas"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "pironman_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "OFF"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "ON"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 12
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "pironman_influxdb"
+          },
+          "query": "SELECT last(\"state\") FROM \"case_fan\" WHERE (\"fan\" = 'case_fans') AND $timeFilter",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "IceCube — running",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "pironman_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 12
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "pironman_influxdb"
+          },
+          "query": "SELECT last(\"speed_percent\") FROM \"case_fan\" WHERE (\"fan\" = 'case_fans') AND $timeFilter",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "IceCube — speed",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 25,
+      "title": "RGB (4x WS2812 by CPU temp) - CPU PWM fan (pironman tower fan, RPM)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "pironman_api"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 7,
+        "x": 0,
+        "y": 17
+      },
+      "id": 18,
+      "options": {
+        "infinitePan": false,
+        "inlineEditing": false,
+        "panZoom": false,
+        "root": {
+          "background": {
+            "color": {
+              "fixed": "transparent"
+            }
+          },
+          "border": {
+            "color": {
+              "fixed": "dark-green"
+            }
+          },
+          "constraint": {
+            "horizontal": "left",
+            "vertical": "top"
+          },
+          "elements": [
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "green"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"enabled\": true}",
+                  "endpoint": "http://${pe_server_url}/api/v1/rgb",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "primary"
+                },
+                "text": {
+                  "fixed": "AUTO ON",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "rgb_on",
+              "placement": {
+                "height": 34,
+                "left": 8,
+                "rotation": 0,
+                "top": 8,
+                "width": 110
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "purple"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"enabled\": false}",
+                  "endpoint": "http://${pe_server_url}/api/v1/rgb",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "destructive"
+                },
+                "text": {
+                  "fixed": "AUTO OFF",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "rgb_off",
+              "placement": {
+                "height": 34,
+                "left": 128,
+                "rotation": 0,
+                "top": 8,
+                "width": 110
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "config": {
+                "align": "left",
+                "color": {
+                  "fixed": "#8e9bb5"
+                },
+                "size": 12,
+                "text": {
+                  "fixed": "Off = manual RGB panels take over",
+                  "mode": "fixed"
+                },
+                "valign": "middle"
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "l_rgb2",
+              "placement": {
+                "height": 18,
+                "left": 8,
+                "rotation": 0,
+                "top": 58,
+                "width": 260
+              },
+              "type": "text"
+            }
+          ],
+          "name": "root",
+          "placement": {
+            "height": 100,
+            "left": 0,
+            "rotation": 0,
+            "top": 0,
+            "width": 100
+          },
+          "type": "frame"
+        },
+        "showAdvancedTypes": false,
+        "tooltip": {
+          "disableForOneClick": false,
+          "mode": "single"
+        },
+        "zoomToContent": false
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "rgb_enable",
+              "text": "",
+              "type": "boolean"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "pironman_api"
+          },
+          "filters": [],
+          "format": "table",
+          "global_query_id": "",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "data.system",
+          "source": "url",
+          "type": "json",
+          "url": "get-config",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "RGB — auto by CPU temp",
+      "type": "canvas"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "pironman_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "blue",
+                "value": 45
+              },
+              {
+                "color": "yellow",
+                "value": 52.5
+              },
+              {
+                "color": "orange",
+                "value": 57.5
+              },
+              {
+                "color": "red",
+                "value": 62.5
+              },
+              {
+                "color": "purple",
+                "value": 65
+              }
+            ]
+          },
+          "unit": "celsius"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 9,
+        "x": 7,
+        "y": 17
+      },
+      "id": 16,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "pironman_influxdb"
+          },
+          "query": "SELECT mean(\"cpu_temperature\") FROM \"history\" WHERE $timeFilter GROUP BY time($__interval) fill(previous)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "CPU temp — current LED colour",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "pironman_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 3000
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          },
+          "unit": "rotrpm"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 17
+      },
+      "id": 13,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "pironman_influxdb"
+          },
+          "query": "SELECT last(\"pwm_fan_speed\") FROM \"history\" WHERE $timeFilter",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "CPU PWM fan — RPM",
+      "type": "stat"
+    },
+    {
+      "gridPos": {
+        "h": 11,
+        "w": 7,
+        "x": 0,
+        "y": 23
+      },
+      "id": 19,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "#### LED colour by CPU temperature\n| Temp (°C) | LED colour |\n|---|---|\n| < 45 | 🟢 **green** (cool) |\n| 45 – 52 | 🔵 **blue** |\n| 52 – 57 | 🟡 **yellow** |\n| 57 – 62 | 🟠 **orange** |\n| 62 – 65 | 🔴 **red** |\n| > 65 | 🟣 **purple — blinking ALARM** |\n\nBrightness rises with temperature.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [],
+      "title": "LED colour legend",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "pironman_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "rotrpm"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "CPU PWM fan"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 17,
+        "x": 7,
+        "y": 23
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "pironman_influxdb"
+          },
+          "query": "SELECT mean(\"pwm_fan_speed\") FROM \"history\" WHERE $timeFilter GROUP BY time($__interval) fill(previous)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "CPU PWM fan — RPM over time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "pironman_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*cpu_temperature.*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "CPU"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*gpu_temperature.*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "GPU"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 17,
+        "x": 7,
+        "y": 28
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "pironman_influxdb"
+          },
+          "query": "SELECT mean(\"cpu_temperature\") FROM \"history\" WHERE $timeFilter GROUP BY time($__interval) fill(previous)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "pironman_influxdb"
+          },
+          "query": "SELECT mean(\"gpu_temperature\") FROM \"history\" WHERE $timeFilter GROUP BY time($__interval) fill(previous)",
+          "rawQuery": true,
+          "refId": "B",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "CPU & GPU temperature",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 26,
+      "title": "Second OLED screen (128x64 SSD1315, i2c-3)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "pironman_api"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 7,
+        "x": 0,
+        "y": 35
+      },
+      "id": 21,
+      "options": {
+        "infinitePan": false,
+        "inlineEditing": false,
+        "panZoom": false,
+        "root": {
+          "background": {
+            "color": {
+              "fixed": "transparent"
+            }
+          },
+          "border": {
+            "color": {
+              "fixed": "dark-green"
+            }
+          },
+          "constraint": {
+            "horizontal": "left",
+            "vertical": "top"
+          },
+          "elements": [
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "green"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"enabled\": true}",
+                  "endpoint": "http://${pe_server_url}/api/v1/oled",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "primary"
+                },
+                "text": {
+                  "fixed": "ON",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "oled_on",
+              "placement": {
+                "height": 34,
+                "left": 8,
+                "rotation": 0,
+                "top": 8,
+                "width": 100
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "red"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{\"enabled\": false}",
+                  "endpoint": "http://${pe_server_url}/api/v1/oled",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "destructive"
+                },
+                "text": {
+                  "fixed": "OFF",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "oled_off",
+              "placement": {
+                "height": 34,
+                "left": 116,
+                "rotation": 0,
+                "top": 8,
+                "width": 100
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "blue"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{}",
+                  "endpoint": "http://${pe_server_url}/api/v1/oled/clear",
+                  "headerParams": [],
+                  "method": "POST",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "secondary"
+                },
+                "text": {
+                  "fixed": "CLEAR",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "oled_clear",
+              "placement": {
+                "height": 34,
+                "left": 224,
+                "rotation": 0,
+                "top": 8,
+                "width": 100
+              },
+              "type": "button"
+            },
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "config": {
+                "align": "left",
+                "color": {
+                  "fixed": "#8e9bb5"
+                },
+                "size": 12,
+                "text": {
+                  "fixed": "CLEAR = drop pushed text/image, back to auto rotation",
+                  "mode": "fixed"
+                },
+                "valign": "middle"
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "l_oled2",
+              "placement": {
+                "height": 18,
+                "left": 8,
+                "rotation": 0,
+                "top": 58,
+                "width": 380
+              },
+              "type": "text"
+            }
+          ],
+          "name": "root",
+          "placement": {
+            "height": 100,
+            "left": 0,
+            "rotation": 0,
+            "top": 0,
+            "width": 100
+          },
+          "type": "frame"
+        },
+        "showAdvancedTypes": false,
+        "tooltip": {
+          "disableForOneClick": false,
+          "mode": "single"
+        },
+        "zoomToContent": false
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "rgb_enable",
+              "text": "",
+              "type": "boolean"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "pironman_api"
+          },
+          "filters": [],
+          "format": "table",
+          "global_query_id": "",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "data.system",
+          "source": "url",
+          "type": "json",
+          "url": "get-config",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "OLED — control",
+      "type": "canvas"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "pironman_extend"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false,
+            "wrapHeaderText": false,
+            "wrapText": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 7,
+        "x": 0,
+        "y": 40
+      },
+      "id": 22,
+      "options": {
+        "cellHeight": "lg",
+        "enablePagination": false,
+        "showHeader": true
+      },
+      "pluginVersion": "13.2.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "enabled",
+              "text": "Enabled",
+              "type": "boolean"
+            },
+            {
+              "selector": "available",
+              "text": "Available",
+              "type": "boolean"
+            },
+            {
+              "selector": "showing",
+              "text": "Showing",
+              "type": "string"
+            },
+            {
+              "selector": "metrics.cpu",
+              "text": "CPU °C",
+              "type": "number"
+            },
+            {
+              "selector": "metrics.load",
+              "text": "Load",
+              "type": "number"
+            },
+            {
+              "selector": "metrics.ram",
+              "text": "RAM %",
+              "type": "number"
+            },
+            {
+              "selector": "metrics.disk",
+              "text": "Disk %",
+              "type": "number"
+            },
+            {
+              "selector": "metrics.ssd",
+              "text": "SSD °C",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "pironman_extend"
+          },
+          "filters": [],
+          "format": "table",
+          "global_query_id": "",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "oled",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/status",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "OLED status",
+      "transformations": [
+        {
+          "id": "transpose",
+          "options": {
+            "firstFieldName": "Page",
+            "restFieldsName": "Values"
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "preload": false,
+  "refresh": "10s",
+  "schemaVersion": 42,
+  "tags": [
+    "pironman",
+    "pironman-extend",
+    "fans",
+    "oled"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allowCustomValue": true,
+        "current": {
+          "text": "192.168.1.62:34010",
+          "value": "192.168.1.62:34010"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "pe_server_url",
+        "multi": false,
+        "name": "pe_server_url",
+        "options": [
+          {
+            "selected": false,
+            "text": "localhost:34010",
+            "value": "localhost:34010"
+          },
+          {
+            "selected": true,
+            "text": "192.168.1.62:34010",
+            "value": "192.168.1.62:34010"
+          }
+        ],
+        "query": "localhost:34010,192.168.1.62:34010",
+        "skipUrlSync": false,
+        "type": "custom",
+        "valuesFormat": "csv"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Pironman-Extended",
+  "uid": "case-fans",
+  "version": 15
+}
