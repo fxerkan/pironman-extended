@@ -1208,7 +1208,8 @@ class OledController:
         for tok in self.pages:
             if tok == "cpu":
                 out.append({"type": "metric", "icon": "temp", "title": "CPU SICAKLIK",
-                            "big": "--" if m["cpu"] is None else f"{m['cpu']:.0f}", "unit": "°C"})
+                            "big": "--" if m["cpu"] is None else f"{m['cpu']:.0f}", "unit": "°C",
+                            "big_size": 46, "big_y": 12, "unit_size": 16})
             elif tok == "ssd":
                 out.append({"type": "metric", "icon": "temp", "title": "SSD SICAKLIK",
                             "big": "--" if m["ssd"] is None else f"{m['ssd']:.0f}", "unit": "°C",
@@ -1253,8 +1254,11 @@ class OledController:
                 out.append({"type": "metric", "icon": "down", "title": "INDIRME HIZI",
                             "big": big, "unit": "" if big == "--" else "Mb", "sub": sub})
             elif tok.startswith("anim:"):
-                out.append({"type": "anim", "name": tok.split(":", 1)[1],
-                            "dwell": self.cfg["oled_anim_dwell"]})
+                nm = tok.split(":", 1)[1]
+                # fxerkan marquee needs a full sweep (~9s) to clear the screen before
+                # the page flips, so give it a longer dwell than the generic anims
+                out.append({"type": "anim", "name": nm,
+                            "dwell": 13 if nm == "fxerkan" else self.cfg["oled_anim_dwell"]})
         return out
 
     def _render_spec(self, spec):
