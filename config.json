@@ -1,74 +1,165 @@
 {
-  "fan_interval": 5,
-  "rgb_interval": 8,
-  "led_blink_period": 0.4,
-  "http_port": 34010,
-  "bind": "0.0.0.0",
-  "influx_db": "pironman5-max",
-  "curve": [
+ "fan_interval": 5,
+ "rgb_interval": 8,
+ "led_blink_period": 0.4,
+ "http_port": 34010,
+ "bind": "0.0.0.0",
+ "influx_db": "pironman5-max",
+ "curve": [
+  [
+   45,
+   0
+  ],
+  [
+   55,
+   40
+  ],
+  [
+   65,
+   70
+  ],
+  [
+   75,
+   100
+  ]
+ ],
+ "fans": [
+  {
+   "name": "case_fans",
+   "model": "IceCube 40x40x10 5V (stock, 1x - fan2 slot empty)",
+   "power_pin": 6,
+   "led_pin": 5,
+   "pwm": false,
+   "on_temp": 67,
+   "off_temp": 60,
+   "mode": "auto",
+   "led_mode": "follow",
+   "led_warn_temp": 65
+  },
+  {
+   "name": "noctua_nf_a4x10",
+   "model": "Noctua NF-A4x10 5V PWM (GPIO18/pin12, 25kHz hardware PWM)",
+   "pwm_chip": "1f00098000",
+   "pwm_channel": 2,
+   "pwm_freq": 25000,
+   "min_start_percent": 30,
+   "mode": "auto",
+   "curve": [
     [
-      45,
-      0
+     40,
+     10
     ],
     [
-      55,
-      40
+     45,
+     15
     ],
     [
-      65,
-      70
+     50,
+     24
     ],
     [
-      75,
-      100
+     55,
+     36
+    ],
+    [
+     60,
+     55
+    ],
+    [
+     63,
+     72
+    ],
+    [
+     67,
+     100
     ]
+   ]
+  }
+ ],
+ "rgb_enabled": true,
+ "rgb_api_base": "http://127.0.0.1:34001/api/v1.0",
+ "rgb_anchors": [
+  [
+   40,
+   "#00ff00"
   ],
-  "fans": [
-    {
-      "name": "case_fans",
-      "model": "IceCube 40x40x10 5V (stock, 1x - fan2 slot empty)",
-      "power_pin": 6,
-      "led_pin": 5,
-      "pwm": false,
-      "on_temp": 56,
-      "off_temp": 54,
-      "mode": "auto",
-      "led_mode": "follow",
-      "led_warn_temp": 65
-    }
+  [
+   50,
+   "#0000ff"
   ],
-  "rgb_enabled": true,
-  "rgb_api_base": "http://127.0.0.1:34001/api/v1.0",
-  "rgb_anchors": [
-    [
-      40,
-      "#00ff00"
-    ],
-    [
-      50,
-      "#0000ff"
-    ],
-    [
-      55,
-      "#ffff00"
-    ],
-    [
-      60,
-      "#ff8000"
-    ],
-    [
-      65,
-      "#ff0000"
-    ]
+  [
+   55,
+   "#ffff00"
   ],
-  "rgb_warn_temp": 65,
-  "rgb_warn_color": "#b000ff",
-  "rgb_warn_speed": 90,
-  "rgb_temp_lo": 40,
-  "rgb_temp_hi": 65,
-  "rgb_bri_lo": 20,
-  "rgb_bri_hi": 100,
-  "rgb_color_step": 8,
-  "rgb_bri_step": 5,
-  "rgb_temp_deadband": 1.0
+  [
+   60,
+   "#ff8000"
+  ],
+  [
+   65,
+   "#ff0000"
+  ]
+ ],
+ "rgb_warn_temp": 65,
+ "rgb_warn_color": "#b000ff",
+ "rgb_warn_speed": 90,
+ "rgb_temp_lo": 40,
+ "rgb_temp_hi": 65,
+ "rgb_bri_lo": 20,
+ "rgb_bri_hi": 100,
+ "rgb_color_step": 8,
+ "rgb_bri_step": 5,
+ "rgb_temp_deadband": 1.0,
+ "oled_enabled": true,
+ "oled_i2c_port": 3,
+ "oled_i2c_addr": "0x3c",
+ "oled_refresh": 2,
+ "oled_page_dwell": 60,
+ "oled_alert_rot": 3,
+ "oled_alarm_override": true,
+ "oled_contrast": 255,
+ "oled_pages": [
+  "anim:fxerkan",
+  "rpifx",
+  "cpu",
+  "load",
+  "disks",
+  "ssd",
+  "ram",
+  "clock",
+  "speed",
+  "anim:*",
+  "anim:*"
+ ],
+ "oled_thresholds": {
+  "cpu": [
+   70,
+   80
+  ],
+  "load": [
+   1.5,
+   3.0
+  ],
+  "ram": [
+   90,
+   95
+  ],
+  "disk": [
+   85,
+   95
+  ],
+  "ssd": [
+   60,
+   70
+  ]
+ },
+ "oled_anim_dwell": 8,
+ "oled_anim_frame": 0.2,
+ "oled_banner": [
+  "FXerkan"
+ ],
+ "oled_banner_dwell": 6,
+ "oled_disk_min_gb": 16,
+ "oled_speedtest_interval": 21600,
+ "oled_speedtest_url": "https://speed.cloudflare.com/__down?bytes=25000000"
 }
