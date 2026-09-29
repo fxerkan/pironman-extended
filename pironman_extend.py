@@ -797,7 +797,7 @@ class OledController:
         fu = self._font(us)
         uw = d.textlength(unit, font=fu) if unit else 0
         by = spec.get("big_y", 15)
-        if spec.get("big_align") == "right":
+        if spec.get("big_align", "right") != "left":   # big value hugs the right margin by default
             # value + unit hugged against the right margin (disks want % on the right)
             ux = W - 3 - uw
             d.text((max(4, ux - bw), by), big, font=fb, fill=1)
@@ -1323,15 +1323,20 @@ class OledController:
                 self.showing = "off"
             return
         self._cleared = False
-        # self-heal: keep re-asserting display-ON so a stray "display off" (from a
-        # crash/cleanup or another process touching the bus) can never leave the
-        # panel dark while we happily keep writing frames it never shows.
-        if self.tick % 5 == 0:
-            try:
-                self.dev.show()
-                self.dev.contrast(int(self.cfg["oled_contrast"]))
-            except Exception:
-                pass
+        # self-heal, EVERY frame: re-assert the full power-on state. A loose
+        # connector momentarily browns out the panel, which resets it to its
+        # factory default (charge-pump OFF, display OFF) -> stays black even though
+        # we keep writing GDDRAM. display-ON (0xAF) alone is NOT enough: without the
+        # charge pump the glass has no drive voltage. So re-send charge-pump-on +
+        # contrast + resume + normal + display-on. Cheap (7 cmd bytes); luma re-sends
+        # the column/page addressing on every display() so layout stays correct.
+        try:
+            self.dev.command(0x8D, 0x14,                       # charge pump ON
+                             0xA4, 0xA6,                        # resume RAM, non-inverted
+                             0x81, int(self.cfg["oled_contrast"]) & 0xFF,
+                             0xAF)                              # display ON
+        except Exception:
+            pass
         m = self.read_metrics()
         alerts = oled_build_alerts(m, read_throttled(), root_readonly(),
                                    self.thresholds, self.nproc)
