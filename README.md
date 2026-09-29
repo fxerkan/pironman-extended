@@ -3,7 +3,7 @@
 > An extension for [sunfounder/pironman5](https://github.com/sunfounder/pironman5).
 > It runs alongside the official `pironman5` service and does not replace it.
 
-![Pironman-Extended Grafana dashboard](docs/pironman-extended-casefans-grafana-dashboard.png)
+![Pironman-Extended Grafana dashboard](docs/pironman-extended-grafana-dashboard.png)
 
 One small service that extends a **SunFounder Pironman 5 / 5 Max** with the things
 the stock firmware doesn't do, behind a single versioned HTTP API. Talks to the
