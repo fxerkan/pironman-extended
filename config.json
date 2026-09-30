@@ -73,7 +73,9 @@
      67,
      100
     ]
-   ]
+   ],
+   "tach_pin": 17,
+   "pulses_per_rev": 2
   }
  ],
  "rgb_enabled": true,
@@ -103,12 +105,12 @@
  "rgb_warn_temp": 65,
  "rgb_warn_color": "#b000ff",
  "rgb_warn_speed": 90,
- "rgb_temp_lo": 40,
+ "rgb_temp_lo": 45,
  "rgb_temp_hi": 65,
- "rgb_bri_lo": 20,
+ "rgb_bri_lo": 5,
  "rgb_bri_hi": 100,
  "rgb_color_step": 8,
- "rgb_bri_step": 5,
+ "rgb_bri_step": 1,
  "rgb_temp_deadband": 1.0,
  "oled_enabled": true,
  "oled_i2c_port": 3,
