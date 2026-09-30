@@ -71,6 +71,7 @@ DEFAULTS = {
     "oled_i2c_addr": 60,            # 0x3c (int or "0x3c")
     "oled_width": 128, "oled_height": 64,
     "oled_refresh": 2,             # render/scan tick (s) -> anomaly catch speed
+    "oled_heal_full": 8,           # re-assert full geometry every N s (fixes scrambled glass after an i2c glitch); 0 disables
     "oled_page_dwell": 60,         # seconds per metric before rotating (1-3 min => 60..180)
     "oled_alert_rot": 3,           # if many alarms, seconds between them
     "oled_alarm_override": True,   # alarms preempt a user-pushed text/image (safety)
@@ -502,8 +503,21 @@ def oled_severity(key, value, thresholds, nproc):
     return 2 if v >= crit else 1 if v >= warn else 0
 
 
-def oled_build_alerts(m, throttled, ro, thresholds, nproc):
-    """Active problems as (short_title, detail). System anomalies first, then crit thresholds."""
+HEALTH_ALERTS = "/run/rpifx-health/oled_alerts.json"
+
+
+def read_health_alerts(path=HEALTH_ALERTS, max_age=240):
+    """External problems from rpifx-health-check as (title, detail); [] if missing/stale/garbled."""
+    try:
+        if time.time() - os.stat(path).st_mtime > max_age:
+            return []
+        return [(str(x["t"]), str(x["d"])) for x in json.load(open(path))]
+    except Exception:
+        return []
+
+
+def oled_build_alerts(m, throttled, ro, thresholds, nproc, ext=()):
+    """Active problems as (short_title, detail). System anomalies first, then crit thresholds, then ext."""
     a = []
     if throttled & 0x1: a.append(("DUSUK VOLTAJ", "5V besleme zayif"))
     if throttled & 0x4: a.append(("THROTTLE", "CPU kisiliyor"))
@@ -520,6 +534,7 @@ def oled_build_alerts(m, throttled, ro, thresholds, nproc):
     for k in ["cpu", "ssd", "disk", "ram", "load"]:
         if m.get(k) is not None and oled_severity(k, m[k], thresholds, nproc) == 2:
             a.append(msg[k](m[k]))
+    a.extend(x for x in ext if x not in a)
     return a
 
 
@@ -661,6 +676,7 @@ class OledController:
         self._cur_is_anim = False
         self._cleared = False
         self._last_render = 0.0
+        self._last_heal = 0.0        # last full-geometry self-heal (see render_once)
         self._fonts = {}
         self._disks = []
         self._disks_ts = 0.0
@@ -1341,9 +1357,34 @@ class OledController:
                              0xAF)                              # display ON
         except Exception:
             pass
+        # A glitch on the i2c lines (a nudged connector) can also desync the
+        # SSD1315's *geometry* registers -> the panel shows scrambled garbage, not
+        # black, so the power-state heal above doesn't touch it and it survives
+        # forever (only a service restart re-ran the full init). display() re-sends
+        # column/page addressing but NOT segment-remap / COM-scan / multiplex /
+        # offset / start-line / mem-mode, which is exactly what scrambles. So on a
+        # slow cadence re-assert luma's full 128x64 geometry (matches ssd1306.__init__,
+        # minus the display-off/on toggle so there's no visible blank). Idempotent
+        # when nothing is wrong; recovers scramble within oled_heal_full seconds.
+        heal = self.cfg.get("oled_heal_full", 0)
+        if heal and (now - self._last_heal) >= heal:
+            self._last_heal = now
+            try:
+                self.dev.command(0xD5, 0x80,   # clock div
+                                 0xA8, 0x3F,   # multiplex 63 (64 rows)
+                                 0xD3, 0x00,   # display offset 0
+                                 0x40,         # start line 0
+                                 0x20, 0x00,   # memory mode = horizontal
+                                 0xA1,         # segment remap col127->SEG0
+                                 0xC8,         # COM scan direction remapped
+                                 0xDA, 0x12,   # COM pins config (128x64)
+                                 0xD9, 0xF1,   # precharge
+                                 0xDB, 0x40)   # vcomh
+            except Exception:
+                pass
         m = self.read_metrics()
         alerts = oled_build_alerts(m, read_throttled(), root_readonly(),
-                                   self.thresholds, self.nproc)
+                                   self.thresholds, self.nproc, read_health_alerts())
         with self.lock:
             ov = self.override
             if ov and ov["expires"] is not None and now >= ov["expires"]:
@@ -1394,7 +1435,8 @@ class OledController:
         alerts = []
         if self.dev and self.enabled:
             alerts = [a[0] for a in oled_build_alerts(
-                m, read_throttled(), root_readonly(), self.thresholds, self.nproc)]
+                m, read_throttled(), root_readonly(), self.thresholds, self.nproc,
+                read_health_alerts())]
         return {
             "enabled": self.enabled, "available": self.dev is not None,
             "showing": self.showing, "pages": self.pages,
@@ -1710,6 +1752,8 @@ def selftest():
     assert oled_build_alerts(clean, 0x1, False, th, 4)[0][0] == "DUSUK VOLTAJ"
     assert oled_build_alerts(clean, 0, True, th, 4)[0][0] == "DISK SALT-OKUR"
     assert oled_build_alerts({**clean, "cpu": 90}, 0, False, th, 4)[0][0] == "CPU KRITIK"
+    assert oled_build_alerts(clean, 0, False, th, 4, [("SANDISK YOK", "x")]) == [("SANDISK YOK", "x")]
+    assert read_health_alerts("/nonexistent") == []
     assert human_bytes(476 * 1024**3) == "476G"
     assert human_bytes(1000204140544) == "932G"
     assert human_bytes(int(1.5 * 1024**4)) == "1.5T"
